@@ -21,7 +21,27 @@ class Handler extends ExceptionHandler
         \Illuminate\Session\TokenMismatchException::class,
         \Illuminate\Validation\ValidationException::class,
     ];
+/**
+ * Create a Symfony response for the given exception.
+ *
+ * @param  \Exception  $e
+ * @return mixed
+ */
+protected function convertExceptionToResponse(Exception $e)
+{
+    if (config('app.debug')) {
+        $whoops = new \Whoops\Run;
+        $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
 
+        return response()->make(
+            $whoops->handleException($e),
+            method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500,
+            method_exists($e, 'getHeaders') ? $e->getHeaders() : []
+        );
+    }
+
+    return parent::convertExceptionToResponse($e);
+} 
     /**
      * Report or log an exception.
      *
@@ -45,8 +65,27 @@ class Handler extends ExceptionHandler
     public function render($request, Exception $exception)
     {
         return parent::render($request, $exception);
+
+    }
+    /**
+     * Render an exception using Whoops.
+     * 
+     * @param  \Exception $e
+     * @return \Illuminate\Http\Response
+     */
+    protected function renderExceptionWithWhoops(Exception $e)
+    {
+        $whoops = new \Whoops\Run;
+        $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler());
+ 
+        return new \Illuminate\Http\Response(
+            $whoops->handleException($e),
+            $e->getStatusCode(),
+            $e->getHeaders()
+        );
     }
 
+ 
     /**
      * Convert an authentication exception into an unauthenticated response.
      *
